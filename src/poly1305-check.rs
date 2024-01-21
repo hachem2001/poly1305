@@ -73,64 +73,51 @@ fn main() {
 
 // Clamp r associated with the key.
 fn poly_1305_clamp(r: u128) -> u128 {
-    let mut r = r;
-    r &= 0x0ffffffc0ffffffc0ffffffc0fffffff;
-    r
+    let mask: u128 = 0x0ffffffc0ffffffc0ffffffc0fffffff;
+    r & mask
 }
-
-/*
-    poly1305_mac(msg, key):
-        r = le_bytes_to_num(key[0..15])
-        clamp(r)
-        s = le_bytes_to_num(key[16..31])
-        a = 0  /* a is the accumulator */
-        p = (1<<130)-5
-        for i=1 upto ceil(msg length in bytes / 16)
-            j = min(i*16-1, msg length in bytes - 1)
-            n = le_bytes_to_num(msg[((i-1)*16)..j] | [0x01])
-            a += n
-            a = (r * a) % p
-        end
-
-        a += s
-        return num_to_16_le_bytes(a)
-    end
-*/
 
 fn poly1305_mac(msg: &[u8], key: (u128, u128)) -> Vec<u8>{
     let (s, r) = key;
-    //let r = BigUint::from(r.clone());
-    //let s = BigUint::from(s.clone());
     let r = poly_1305_clamp(r);
     println!("Clamped r is : {:x}", r);
-    let p= &((BigUint::from(1u8)) << 130 - 5);
-    let mut a = BigUint::from(0u8);
+    let p: &BigUint= &(((BigUint::from(1u8)) << 130) - (BigUint::from(5u8)));
+    //dbg!(&p);
 
-    for i in 1..=msg.len()/16 {
-        let j = std::cmp::min(i*16-1, msg.len()-1);
+    let mut a = BigUint::from(0u8);
+    
+    for i in 1..=(((msg.len() as f64)/16f64).ceil() as usize) {
+        let j = std::cmp::min(i*16, msg.len());
         let mut msg2:Vec<u8> = msg[((i-1)*16)..j].to_vec();
         msg2.push(0x01);
 
 
         let n = BigUint::from_bytes_le(&msg2);
-        
+
+        //println!("Before : n {:x?} a {:x?}", &(n.to_bytes_le()), &(a.to_bytes_le()));
         a = a + n;
-        a = (r * a) % p;
+        //println!("After : a {:x?}", &(a.to_bytes_le()));
+        a = r * a;
+        //println!("After : a {:x?}", &(a.to_bytes_le()));
+        a = a % p;
+        //println!("After : a {:x?}", &(a.to_bytes_le()));
     }
 
     a += s;
-
     let a_bytes = a.to_bytes_le();
+    let j = std::cmp::min(a_bytes.len(), 16);
+    let a_bytes = a_bytes[0..j].to_vec();
     a_bytes
 }
 
 // Extract the keys from the hex string
 fn extract_keys(hexstr: &str) -> Result<(u128, u128), std::num::ParseIntError> {
     let (s_hex, r_hex) = hexstr.split_at(32);
-    let s = u128::from_str_radix(s_hex, 16)?;
-    let r = u128::from_str_radix(r_hex, 16)?;
-
-    Ok((s, r))
+    let r = u128::from_str_radix(s_hex, 16)?;
+    let s = u128::from_str_radix(r_hex, 16)?;
+    let s = s.to_be();
+    let r = r.to_be();
+    Ok((r, s))
 }
 
 #[cfg(test)]
