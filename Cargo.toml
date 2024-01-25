@@ -9,10 +9,10 @@ edition = "2021"
 crypto-bigint = "0.5.5"
 num-bigint = "0.4.4"
 
-[[bin]]
-name = "poly1305-gen"
-path = "src/poly1305-gen.rs"
+# [[bin]]
+# name = "poly1305-gen"
+# path = "src/poly1305-gen.rs"
 
-[[bin]]
-name = "poly1305-check"
-path = "src/poly1305-check.rs"
+# [[bin]]
+# name = "poly1305-check"
+# path = "src/poly1305-check.rs"
